@@ -129,9 +129,9 @@ pdf-ocr-extractor/
 
 ## 版本紀錄（Commit Log）
 
-| 版本 | 日期 | 說明 |
+| 版本 | 日期 | Commit／說明 |
 | --- | --- | --- |
-| v0.1.0 | 2026-10-16 | 初始版本：OpenCV + Tesseract OCR、標題擷取、網頁介面、Excel 匯出、Docker、單元／功能／E2E 測試 |
+| v0.1.0 | 2026-10-16 | `3006c6c` 初始版本：OpenCV + Tesseract OCR、標題擷取、網頁介面、Excel 匯出、Docker、單元／功能／E2E 測試 |
 
 ## 授權
 

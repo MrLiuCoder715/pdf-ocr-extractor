@@ -41,4 +41,4 @@
 ## 8. 文件與版本控制
 
 - [x] 8.1 撰寫 README（名稱、描述、使用方式、部署步驟、授權、目錄結構、環境變數、commit 紀錄）與 LICENSE
-- [ ] 8.2 初始化 git、提交，並建立 GitHub 公開儲存庫 `pdf-ocr-extractor` 推送
+- [x] 8.2 初始化 git、提交，並建立 GitHub 公開儲存庫 `pdf-ocr-extractor` 推送
