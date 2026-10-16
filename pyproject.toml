@@ -1,0 +1,35 @@
+[project]
+name = "pdf-ocr-extractor"
+version = "0.1.0"
+description = "Extract values following user-defined titles from PDFs via OpenCV + Tesseract, export to Excel"
+authors = [
+    { name = "MrLiuCoder715", email = "252720859+MrLiuCoder715@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "flask>=3.1.3",
+    "gunicorn>=26.2.0",
+    "numpy>=2.5.4",
+    "opencv-python-headless>=5.0.0.93",
+    "openpyxl>=3.1.5",
+    "pymupdf>=1.28.2",
+    "pytesseract>=0.3.13",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-playwright>=0.10.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "tesseract: requires a real Tesseract binary (runs in Docker)",
+    "e2e: browser end-to-end tests against a running server",
+]
+addopts = "-m 'not e2e'"

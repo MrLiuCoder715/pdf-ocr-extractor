@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    image: pdf-ocr-extractor:latest
+    ports:
+      - "127.0.0.1:${PORT:-8000}:${PORT:-8000}"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: ${PORT:-8000}
+    restart: unless-stopped

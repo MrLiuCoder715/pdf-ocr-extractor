@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF 文字擷取</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main>
+    <h1>PDF 文字擷取</h1>
+
+    <section>
+      <h2>1. 擷取標題</h2>
+      <form id="title-form">
+        <input id="title-input" type="text" placeholder="例如：工程編號" aria-label="新標題">
+        <button type="submit" id="add-title">新增</button>
+      </form>
+      <ul id="title-list" aria-label="標題清單"></ul>
+    </section>
+
+    <section>
+      <h2>2. 匯入 PDF</h2>
+      <input id="pdf-input" type="file" accept="application/pdf,.pdf" multiple aria-label="選擇 PDF">
+      <button type="button" id="extract-btn">開始擷取</button>
+    </section>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section id="result-section" hidden>
+      <h2>3. 擷取結果</h2>
+      <div class="table-wrap"><table id="result-table"></table></div>
+      <button type="button" id="download-btn">下載 Excel</button>
+    </section>
+  </main>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

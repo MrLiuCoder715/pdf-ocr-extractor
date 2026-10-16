@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+node_modules/
+.pytest_cache/
+build/
+dist/
+output/
+*.xlsx
+test-results/
