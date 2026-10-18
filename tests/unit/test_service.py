@@ -55,3 +55,25 @@ def test_page_numbers_start_at_one():
 
     ExtractionService(FakeRenderer(3), IdentityPreprocessor(), RecordingOcr()).extract(b"", "x.pdf", ["t"])
     assert seen == [1, 2, 3]
+
+
+def test_service_extracts_table_rows_for_column_titles():
+    def words(*cells):
+        return [OcrWord(t, x, 0, 100, 50, 0.0, in_table=True) for t, x in cells]
+
+    class TableOcr:
+        def recognize(self, image, page):
+            if page == 1:
+                return [OcrLine(1, [OcrWord("承商名稱", 0, 0, 80, 20, 90.0), OcrWord("樺佑", 100, 0, 40, 20, 90.0)]),
+                        OcrLine(1, words(("姓名", 500))), OcrLine(1, words(("王小明", 500)))]
+            return [OcrLine(2, words(("陳大華", 500)))]
+
+    service = ExtractionService(FakeRenderer(pages=2), IdentityPreprocessor(), TableOcr())
+    result = service.extract(b"", "a.pdf", ["承商名稱", "姓名"], column_titles=["姓名"])
+    assert result.fields == {"承商名稱": "樺佑"}
+    assert result.rows == [{"姓名": "王小明"}, {"姓名": "陳大華"}]
+
+
+def test_service_without_column_titles_has_no_rows():
+    service = ExtractionService(FakeRenderer(1), IdentityPreprocessor(), ScriptedOcr({1: ["工程編號：A1"]}))
+    assert service.extract(b"", "a.pdf", ["工程編號"]).rows == []

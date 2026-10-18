@@ -37,14 +37,15 @@ def test_leading_separators_removed():
     assert extract_fields([line("日期", "=", "-", "2026/10/16")], ["日期"]) == {"日期": "2026/10/16"}
 
 
-def test_value_on_next_line_when_line_has_no_value():
-    lines = [line("工程編號："), line("nglc5zxxxd")]
-    assert extract_fields(lines, ["工程編號"]) == {"工程編號": "nglc5zxxxd"}
-
-
-def test_next_line_must_be_on_same_page():
-    lines = [line("工程編號", page=1), line("nglc5zxxxd", page=2)]
+def test_blank_value_does_not_take_next_line():
+    lines = [line("工程編號"), line("契約編號", "21915A451")]
     assert extract_fields(lines, ["工程編號"]) == {"工程編號": ""}
+
+
+def test_ocr_noise_punctuation_stripped():
+    assert extract_fields([line("承商名稱", "。", "測試公司")], ["承商名稱"]) == {"承商名稱": "測試公司"}
+    assert extract_fields([line("契約編號", "“21915A451")], ["契約編號"]) == {"契約編號": "21915A451"}
+    assert extract_fields([line("契約名稱。", "115年度")], ["契約名稱"]) == {"契約名稱": "115年度"}
 
 
 def test_multiple_titles():

@@ -3,7 +3,7 @@ from pdf_ocr_extractor.config import Settings
 
 def test_defaults_when_env_empty():
     s = Settings.from_env({})
-    assert s.ocr_lang == "chi_tra+eng"
+    assert s.ocr_lang == "chi_tra"
     assert s.ocr_dpi == 300
     assert s.max_pages == 20
     assert s.max_upload_mb == 50

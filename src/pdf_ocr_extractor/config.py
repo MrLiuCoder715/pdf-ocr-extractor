@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Settings:
-    ocr_lang: str = "chi_tra+eng"
+    ocr_lang: str = "chi_tra"
     ocr_dpi: int = 300
     max_pages: int = 20
     max_upload_mb: int = 50

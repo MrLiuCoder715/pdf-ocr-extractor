@@ -1,4 +1,4 @@
-"""Write extraction results to an .xlsx workbook."""
+"""Write a header + rows table to an .xlsx workbook."""
 
 from collections.abc import Sequence
 from io import BytesIO
@@ -6,10 +6,7 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-from pdf_ocr_extractor.models import ExtractionResult
-
 SHEET_TITLE = "擷取結果"
-FILENAME_HEADER = "檔名"
 
 
 def _append_text_row(ws, values: Sequence[str]) -> None:
@@ -20,16 +17,16 @@ def _append_text_row(ws, values: Sequence[str]) -> None:
             cell.data_type = "s"
 
 
-def write_workbook(results: Sequence[ExtractionResult], titles: Sequence[str]) -> bytes:
+def write_workbook(header: Sequence[str], rows: Sequence[Sequence[str]]) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = SHEET_TITLE
-    _append_text_row(ws, [FILENAME_HEADER, *titles])
+    _append_text_row(ws, header)
     for cell in ws[1]:
         cell.font = Font(bold=True)
     ws.freeze_panes = "A2"
-    for result in results:
-        _append_text_row(ws, [result.filename, *(result.fields.get(t, "") for t in titles)])
+    for row in rows:
+        _append_text_row(ws, row)
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()

@@ -16,3 +16,6 @@ button:disabled { opacity: .5; cursor: wait; }
 table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
 th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
 th { background: #f6f8fa; }
+#title-list li button.mode { border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .8rem; padding: 1px 8px; }
+#title-list li button.mode[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.hint { color: var(--muted); font-size: .9rem; margin: 4px 0 0; }

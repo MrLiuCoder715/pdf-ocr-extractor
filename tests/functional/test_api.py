@@ -15,12 +15,16 @@ PDF = b"%PDF-1.7 fake body"
 class FakeService:
     def __init__(self):
         self.calls = []
+        self.column_calls = []
 
-    def extract(self, pdf_bytes, filename, titles):
+    def extract(self, pdf_bytes, filename, titles, column_titles=()):
         self.calls.append((filename, list(titles)))
+        self.column_calls.append(list(column_titles))
         if b"broken" in pdf_bytes:
             raise InvalidPdfError("bad")
-        return ExtractionResult(filename, {t: f"{t}-value" for t in titles})
+        fields = {t: f"{t}-value" for t in titles if t not in column_titles}
+        rows = [{t: f"{t}-{i}" for t in column_titles} for i in (1, 2)] if column_titles else []
+        return ExtractionResult(filename, fields, rows)
 
 
 @pytest.fixture
@@ -35,8 +39,12 @@ def client(service):
     return app.test_client()
 
 
-def post_extract(client, files, titles):
-    data = {"titles": titles, "files": [(BytesIO(body), name) for name, body in files]}
+def post_extract(client, files, titles, column_titles=()):
+    data = {
+        "titles": titles,
+        "column_titles": list(column_titles),
+        "files": [(BytesIO(body), name) for name, body in files],
+    }
     return client.post("/api/extract", data=data, content_type="multipart/form-data")
 
 
@@ -126,3 +134,52 @@ def test_export_rejects_bad_payload(client, payload):
         else client.post("/api/export", json=payload)
     assert resp.status_code == 400
     assert "error" in resp.get_json()
+
+
+def test_extract_returns_rows_and_expanded_table(client, service):
+    resp = post_extract(client, [("a.pdf", PDF)], ["承商名稱", "姓名"], ["姓名", "不存在"])
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["column_titles"] == ["姓名"]
+    assert service.column_calls == [["姓名"]]
+    assert body["results"][0]["rows"] == [{"姓名": "姓名-1"}, {"姓名": "姓名-2"}]
+    assert body["table"] == {
+        "header": ["檔名", "承商名稱", "姓名"],
+        "rows": [["a.pdf", "承商名稱-value", "姓名-1"], ["a.pdf", "承商名稱-value", "姓名-2"]],
+    }
+
+
+def test_extract_without_column_titles_has_one_row_per_pdf(client):
+    body = post_extract(client, [("a.pdf", PDF), ("b.pdf", PDF)], ["工程編號"]).get_json()
+    assert body["column_titles"] == []
+    assert body["table"]["rows"] == [["a.pdf", "工程編號-value"], ["b.pdf", "工程編號-value"]]
+
+
+def test_export_expands_table_rows(client):
+    payload = {
+        "titles": ["承商名稱", "姓名"],
+        "column_titles": ["姓名"],
+        "results": [
+            {"filename": "a.pdf", "fields": {"承商名稱": "樺佑"}, "rows": [{"姓名": "王小明"}, {"姓名": "陳大華"}]}
+        ],
+    }
+    resp = client.post("/api/export", json=payload)
+    assert resp.status_code == 200
+    ws = load_workbook(BytesIO(resp.data))[SHEET_TITLE]
+    assert [[c.value for c in r] for r in ws.iter_rows(min_row=2)] == [
+        ["a.pdf", "樺佑", "王小明"],
+        ["a.pdf", "樺佑", "陳大華"],
+    ]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"titles": ["姓名"], "column_titles": "姓名", "results": []},
+        {"titles": ["姓名"], "results": [{"filename": "a.pdf", "fields": {}, "rows": {}}]},
+        {"titles": ["姓名"], "results": [{"filename": "a.pdf", "fields": {}, "rows": ["x"]}]},
+    ],
+)
+def test_export_rejects_bad_table_payload(client, payload):
+    resp = client.post("/api/export", json=payload)
+    assert resp.status_code == 400

@@ -4,6 +4,14 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
+class Rect:
+    x: int
+    y: int
+    w: int
+    h: int
+
+
+@dataclass(frozen=True)
 class OcrWord:
     text: str
     left: int
@@ -11,6 +19,7 @@ class OcrWord:
     width: int
     height: int
     conf: float
+    in_table: bool = False
 
 
 @dataclass(frozen=True)
@@ -27,3 +36,4 @@ class OcrLine:
 class ExtractionResult:
     filename: str
     fields: dict[str, str]
+    rows: list[dict[str, str]] = field(default_factory=list)

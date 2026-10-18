@@ -1,0 +1,60 @@
+# field-extraction Specification
+
+## Purpose
+TBD - created by archiving change add-pdf-ocr-extractor. Update Purpose after archive.
+## Requirements
+### Requirement: 依標題擷取同行後續文字
+系統 SHALL 在文字行中定位標題，並將標題之後的字詞組合為該標題的值；比對時忽略空白，並去除值開頭的分隔符（`:`、`：`、`-`、`=` 與空白）。
+
+#### Scenario: 標題與值以全形冒號分隔
+- **WHEN** 標題為 `工程編號`，文字行為 `工程編號：nglc5zxxxd`
+- **THEN** `工程編號` 的值為 `nglc5zxxxd`
+
+#### Scenario: OCR 在中文字之間插入空白
+- **WHEN** 標題為 `工程編號`，文字行字詞為 `工`、`程`、`編`、`號`、`:`、`nglc5zxxxd`
+- **THEN** `工程編號` 的值為 `nglc5zxxxd`
+
+#### Scenario: 標題與值黏在同一字詞
+- **WHEN** 標題為 `工程編號`，文字行僅有一個字詞 `工程編號:nglc5zxxxd`
+- **THEN** `工程編號` 的值為 `nglc5zxxxd`
+
+### Requirement: 值於下一個標題前截斷
+當標題之後同一行內出現另一個使用者設定的標題時，系統 SHALL 僅取到該標題之前的內容作為值。
+
+#### Scenario: 同一行有兩組標題與值
+- **WHEN** 標題為 `工程編號`、`日期`，文字行為 `工程編號：A1 日期：2026/10/16`
+- **THEN** `工程編號` 的值為 `A1`，`日期` 的值為 `2026/10/16`
+
+### Requirement: 值的組字規則
+系統 SHALL 在組合值時，僅當前一字詞以 ASCII 英數字結尾、且後一字詞以 ASCII 英數字開頭時插入一個空白，其他情況（包含中文、標點分隔）直接相連。
+
+#### Scenario: 英文多字詞值
+- **WHEN** 標題 `工程名稱` 之後的字詞為 `Phase`、`2`
+- **THEN** 值為 `Phase 2`
+
+#### Scenario: OCR 拆開的日期
+- **WHEN** 標題 `日期` 之後的字詞為 `2026/`、`10/`、`16`
+- **THEN** 值為 `2026/10/16`
+
+#### Scenario: 中文多字詞值
+- **WHEN** 標題 `工程名稱` 之後的字詞為 `台`、`北`、`站`
+- **THEN** 值為 `台北站`
+
+### Requirement: 同行無值時取下一行
+當標題所在行於標題之後沒有內容時，系統 SHALL 以同一頁的下一個文字行作為值。
+
+#### Scenario: 值位於標題下方
+- **WHEN** 第 1 行為 `工程編號`，第 2 行為 `nglc5zxxxd`
+- **THEN** `工程編號` 的值為 `nglc5zxxxd`
+
+### Requirement: 多標題與找不到標題
+系統 SHALL 對每個標題回傳一個值；標題出現多次時取頁序與行序中的第一個命中值；找不到標題時值為空字串。
+
+#### Scenario: 多個標題
+- **WHEN** 標題清單為 `工程編號`、`日期`，文字行為 `工程編號：A1` 與 `日期：2026/10/16`
+- **THEN** 結果為 `{工程編號: A1, 日期: 2026/10/16}`
+
+#### Scenario: 找不到標題
+- **WHEN** 標題 `承包商` 不存在於任何文字行
+- **THEN** `承包商` 的值為空字串
+

@@ -14,13 +14,16 @@ from pdf_ocr_extractor.ocr_engine import TesseractOcrEngine
 from pdf_ocr_extractor.pdf_renderer import InvalidPdfError, PyMuPdfRenderer
 from pdf_ocr_extractor.preprocess import OpenCvPreprocessor
 from pdf_ocr_extractor.service import ExtractionService
+from pdf_ocr_extractor.tabulate import build_table
 
 XLSX_MIMETYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 EXPORT_FILENAME = "ocr_results.xlsx"
 
 
 class Extractor(Protocol):
-    def extract(self, pdf_bytes: bytes, filename: str, titles: Sequence[str]) -> ExtractionResult: ...
+    def extract(
+        self, pdf_bytes: bytes, filename: str, titles: Sequence[str], column_titles: Sequence[str] = ()
+    ) -> ExtractionResult: ...
 
 
 def build_service(settings: Settings) -> ExtractionService:
@@ -47,23 +50,41 @@ def _error(message: str, status: int = 400):
     return jsonify(error=message), status
 
 
-def _parse_export_payload(payload: Any) -> tuple[list[str], list[ExtractionResult]] | None:
+def _is_str_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+
+def _parse_result(item: Any) -> ExtractionResult | None:
+    if not isinstance(item, dict):
+        return None
+    filename, fields, rows = item.get("filename"), item.get("fields"), item.get("rows", [])
+    if not isinstance(filename, str) or not isinstance(fields, dict) or not isinstance(rows, list):
+        return None
+    if not all(isinstance(r, dict) for r in rows):
+        return None
+    return ExtractionResult(
+        filename,
+        {str(k): str(v) for k, v in fields.items()},
+        [{str(k): str(v) for k, v in r.items()} for r in rows],
+    )
+
+
+def _parse_export_payload(payload: Any) -> tuple[list[str], list[str], list[ExtractionResult]] | None:
     if not isinstance(payload, dict):
         return None
     titles, results = payload.get("titles"), payload.get("results")
-    if not isinstance(titles, list) or not all(isinstance(t, str) for t in titles):
+    column_titles = payload.get("column_titles", [])
+    if not _is_str_list(titles) or not _is_str_list(column_titles) or not isinstance(results, list):
         return None
-    if not isinstance(results, list):
+    parsed = [_parse_result(item) for item in results]
+    if any(r is None for r in parsed):
         return None
-    parsed: list[ExtractionResult] = []
-    for item in results:
-        if not isinstance(item, dict):
-            return None
-        filename, fields = item.get("filename"), item.get("fields")
-        if not isinstance(filename, str) or not isinstance(fields, dict):
-            return None
-        parsed.append(ExtractionResult(filename, {str(k): str(v) for k, v in fields.items()}))
-    return titles, parsed
+    return titles, column_titles, parsed
+
+
+def _table_json(results: Sequence[ExtractionResult], titles: Sequence[str], column_titles: Sequence[str]):
+    header, rows = build_table(results, titles, column_titles)
+    return {"header": header, "rows": rows}
 
 
 def create_app(service: Extractor | None = None, settings: Settings | None = None) -> Flask:
@@ -84,6 +105,8 @@ def create_app(service: Extractor | None = None, settings: Settings | None = Non
     def extract():
         files = [f for f in request.files.getlist("files") if f and f.filename]
         titles = clean_titles(request.form.getlist("titles"))
+        requested = set(clean_titles(request.form.getlist("column_titles")))
+        column_titles = [t for t in titles if t in requested]
         if not files:
             return _error("請選擇至少一個 PDF 檔案")
         if not titles:
@@ -98,12 +121,14 @@ def create_app(service: Extractor | None = None, settings: Settings | None = Non
         results = []
         for name, data in uploads:
             try:
-                results.append(extractor.extract(data, name, titles))
+                results.append(extractor.extract(data, name, titles, column_titles))
             except InvalidPdfError:
                 return _error(f"{name} 無法讀取，可能已損毀")
         return jsonify(
             titles=titles,
-            results=[{"filename": r.filename, "fields": r.fields} for r in results],
+            column_titles=column_titles,
+            results=[{"filename": r.filename, "fields": r.fields, "rows": r.rows} for r in results],
+            table=_table_json(results, titles, column_titles),
         )
 
     @app.post("/api/export")
@@ -111,9 +136,10 @@ def create_app(service: Extractor | None = None, settings: Settings | None = Non
         parsed = _parse_export_payload(request.get_json(silent=True))
         if parsed is None:
             return _error("匯出資料格式錯誤")
-        titles, results = parsed
+        titles, column_titles, results = parsed
+        header, rows = build_table(results, titles, column_titles)
         return send_file(
-            BytesIO(write_workbook(results, titles)),
+            BytesIO(write_workbook(header, rows)),
             mimetype=XLSX_MIMETYPE,
             as_attachment=True,
             download_name=EXPORT_FILENAME,

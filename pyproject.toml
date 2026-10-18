@@ -1,6 +1,6 @@
 [project]
 name = "pdf-ocr-extractor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Extract values following user-defined titles from PDFs via OpenCV + Tesseract, export to Excel"
 authors = [
     { name = "MrLiuCoder715", email = "252720859+MrLiuCoder715@users.noreply.github.com" }
